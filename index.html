@@ -1,0 +1,1609 @@
+<head>
+<script>
+
+/* 
+
+    VARS & MISC
+    
+*/
+
+let pageHistory = [];
+let currentBuffsOrDebuffs = [];
+var currentPageData = {
+    pageNumber:0, 
+    statChanges:{}, 
+    addBuff:{},
+    removeBuff:{},
+};
+
+// function to push currentPageData into pageHistory by value, rather than by reference, like .push() would
+function addToPageHistory() {
+    var newObject = {};
+    newObject.pageNumber = currentPageData.pageNumber;
+    newObject.statChanges = currentPageData.statChanges;
+    newObject.addBuff = currentPageData.addBuff;
+    newObject.removeBuff = currentPageData.removeBuff;
+    pageHistory.push(newObject);
+}
+
+// add the zero page to the page history
+addToPageHistory();
+
+/*
+
+    STATS
+
+*/
+
+let stats = {
+    // THIS FIRST VAR IS THE ONE DISPLAYED IN THE MENU BAR
+    "Mental Health": 100, 
+    "Age": 0,
+
+    // physical
+    "Passing": 100,
+
+    // social
+    "Life Stage": undefined,
+    "Self Acceptance": 0,
+    "Accepting Family": false,
+    "Out To Parents": false,
+    "Outed Involuntarily": false,
+    "Age Of Realization": undefined,
+    "Parents": "Parents not yet set",
+
+    // social
+    "Access to Employment": 50,
+    "Access to Healthcare": 50,
+
+    // financial
+    "Job": "unemployed",
+    "Live At Home": true,
+
+}
+
+let buffDebuff = [
+    // Passing
+    {
+        name: "Passing 5",
+        type: "Passing",
+        "Mental Health": 30, 
+        "Access to Employment": 30,
+        "Access to Healthcare": 30,
+        text: "You are indistinguishable, by looks, by voice, by demeanor, from a woman assigned female at birth. For many, this is completely impossible to achieve, and you're very, very lucky. You will experience very little harassment due to your identity, and you will not be looked at differently because of it.",
+    },
+    {
+        name: "Passing 4",
+        type: "Passing",
+        "Mental Health": 20, 
+        "Access to Employment": 20,
+        "Access to Healthcare": 5,
+        text: "You are very rarely seen as trans. By looks, by voice, by demeanor, you are within the range of women assigned female at birth - that means, you have few or no standout features that keep you from passing as female. For many, this is completely impossible to achieve, and you're very, very lucky. Your experience of harassment due to your identity will be low, and you will not be often looked at differently because of it.",
+    },
+    {
+        name: "Passing 3",
+        type: "Passing",
+        "Mental Health": -15, 
+        "Access to Employment": -15,
+        "Access to Healthcare": -5,
+        text: "You are seen as trans on a regular basis - that could be once a month, or it could be once every year or so. By looks, by voice, by demeanor, you can be easily mistaken with a woman assigned female at birth. For many, this is completely impossible to achieve, and you're lucky. Your experience of harassment due to your identity will be low, and you will not be often looked at differently because of it.",
+    },
+    {
+        name: "Passing 2",
+        type: "Passing",
+        "Mental Health": -30, 
+        "Access to Employment": -30,
+        "Access to Healthcare": -10,
+        text: "You are visibly trans - that could be weekly, or it could be monthly. By looks, by voice, by demeanor, you are similar to a woman assigned female at birth. For many, this is impossible - or very difficult - to achieve. If you're in a bad area, you will occasionally be harassed for your appearance, and you will be looked at differently if people find out. Self acceptance will be very hard, since you conform to none of the physical standards that are ingrained into you since birth. You will often feel at war with society, just because of how you look.",
+    },
+    {
+        name: "Passing 1",
+        type: "Passing",
+        "Mental Health": -45, 
+        "Access to Employment": -45,
+        "Access to Healthcare": -15,
+        text: "You don't pass. Most people see you as a trans woman, or as a man. This can be an incredibly difficult thing. If you're in a bad area, you will be harassed for your appearance, and you will be looked at differently - self acceptance will be very hard, since you conform to none of the physical standards that are ingrained into you since birth. You will often feel at war with society, just because of how you look.",
+    },
+];
+
+/*
+
+    STORY SPECIFIC THINGS
+
+*/
+
+let jobs = [
+    // no college
+    {   name: "an artist",              income: 11000,      healthInsurance: false,     jobSatisfaction:85, },
+    {   name: "a part-time bartender",  income: 14000,      healthInsurance: true,      jobSatisfaction:50, },
+    {   name: "a barista",              income: 24000,      healthInsurance: true,      jobSatisfaction:10, },
+    {   name: "a cashier",              income: 28000,      healthInsurance: false,     jobSatisfaction:10, },
+    {   name: "a hairdresser",          income: 32000,      healthInsurance: false,     jobSatisfaction:40, },
+    {   name: "a warehouse worker",     income: 36000,      healthInsurance: false,     jobSatisfaction:20, },
+    {   name: "a waitress",             income: 36000,      healthInsurance: false,     jobSatisfaction:40, },
+    {   name: "tech support",           income: 38000,      healthInsurance: true,      jobSatisfaction:40, },
+    {   name: "an office drone",        income: 45000,      healthInsurance: true,      jobSatisfaction:00, },
+    {   name: "a programmer",           income: 59000,      healthInsurance: false,     jobSatisfaction:55, },
+
+];
+
+let therapistTraits = [
+    "An office cat wandered across the hall in front of you.  ",
+    "There were a few children's toys strewn about - blocks, cardboard books, that sort of thing. ",
+    "The receptionist looked at you dourly over the rim of her glasses. ",
+    "The arms of your chair were cold and sticky artificial leather. ",
+    "The office smelled like paint and plaster - you suspected it was new. ",
+    "As you walked in, a guy was leaning on a pillar outside the building. Normally, you wouldn't have paid him any attention, but he stared you down, dragging deep from his cigarrete, as you walked by. You felt his eyes on your back as you opened the door. ",
+    "You noticed The Art Of The Deal on the shelf in the waiting room - you hoped it didn't mean your therapist was a fan. ",
+    "Something about the place made you nervous. ",
+    "There was a picture on the wall - some generic painting of an American lake. You didn't know enough to say whether it was real, but it didn't look good. "
+];
+
+/*
+
+    STORY
+
+*/
+
+let eventArray = [
+
+
+
+
+// start
+{
+    title: "The gamble begins...",
+    text: 
+
+    "You were just born. Welcome to the world. Enjoy your stay." + 
+    "<br><br>" +
+
+    "You landed in the United States - one of the wealthiest countries in the world. Lucky you. that could have gone much worse.",
+
+    eventAction: function() {
+        function textChainCallback () {
+            cont("Here we go...");
+        }
+        textChain(["Let's roll the dice a little bit more...", "Press the '<< back' button at the top of the page at any time to try and get a different roll.", "Good luck..."], textChainCallback);
+    }
+    
+},
+
+{
+    title: "Here we go...",
+    text: 
+    
+    "Oh boy. It looks like you won the genetic lottery." +
+    "<br><br>"+ 
+
+    "You’re a trans woman - it’s difficult to pin concrete numbers on it, but there was a pretty low chance of that happening (around 0.25%)!" + 
+    "<br><br>" +
+    
+    "And you're stuck with that, too. Your gender is a lot like who you’re attracted to: it’s built into you. Lots of factors could affect your gender identity or sexuality; how many older siblings you have: the hormones present in the womb: chemical exposure: and genetics. Though your gender identity and sexuality can fluctuate throughout your life, that decision is made for you, by chance." +
+    "<br><br>" +
+
+    "This puts you in a complicated position - you’re going to have to make a lot of decisions and face a lot of pressures you wouldn’t have to otherwise." +
+    "<br><br>" +
+
+    "Good luck...",
+    
+    eventAction: function(){
+
+        statChange("Mental Health", -50);
+        cont("A New Beginning");
+    }
+},
+
+{
+    title: "A New Beginning",
+    text: "",
+
+    eventAction: function(){
+        var result = Math.floor(Math.random()*25 + 5);
+        stats["Age Of Realization"] = result;
+
+        newBeginningText = "You first realized when you were " + stats["Age Of Realization"] + ". " +
+        "<br><br>" +
+        "This will have a huge impact on the rest of your life. ";
+        createTextElement ('p', 'pageTextParagraph', newBeginningText, pageWrapper);
+        cont("Parents");
+    }
+},
+
+{
+    title: "Parents",
+    text: "Everyone gets a random set of parents. So - who did you get?",
+    eventAction: function(){
+        stats["Life Stage"] = "Childhood";
+        let parents = [
+            // happy
+            {
+                text: "You were born to Sam & Anna Hutchinson, of New York.",
+                go: "Sam & Anna Hutchinson",
+                buttonText: "Continue",
+                eventAction: function() {},
+            },  
+            {
+                text: "You were born to Amy Joyner.",
+                go: "Amy and Angie Joyner",
+                buttonText: "Continue",
+                eventAction: function() {},
+            },
+            // unhappy
+            {
+                text: "You were born to Jean Khan and Ashley Herman.",
+                go: "Jean Khan and Ashley Herman",
+                buttonText: "Continue",
+                eventAction: function() {},
+            },
+            {
+                text: "You were born to Isabella Mayer and Alan Hawkins.",
+                go: "Isabella Mayer and Alan Hawkins",
+                buttonText: "Continue",
+                eventAction: function() {},
+            },
+        ]
+        rand(parents);
+    },
+},
+
+// parent intros
+{
+    title: "Sam & Anna Hutchinson",
+    text: "A quiet couple, with a large house, Sam & Anna Hutchinson are lifelong democrats. They've not done much direct activism, and they've met a few gay people. You have a stable, relatively wealthy home life. You have health insurance, you're supported and you felt love in your early days.",
+    eventAction: function() {
+        stats["Parents"] = "Sam & Anna Hutchinson";
+        statChange("Access to Healthcare" , +30);
+        statChange("Accepting Family" , true);
+        cont("Early Childhood");
+    }
+},
+{
+    title: "Amy and Angie Joyner",
+    text: "A quiet couple, with a small but cozy apartment, the Joyners are lifelong bleeding heart gay hippies. In their early days, they were picketers, weed smokers, and lovable whirlwinds of energy. Nowadays, double motherhood has tempered them, but they still have time for you at the end of every day. You have a stable, relatively wealthy home life. You have health insurance, you're supported and you felt love in your early days.",
+    eventAction: function() {
+        statChange("Access to Healthcare" , +10);
+        statChange("Accepting Family" , true);
+        stats["Parents"] = "Amy and Angie Joyner";
+        cont("Early Childhood");
+    }
+},
+{
+    title: "Jean Khan and Ashley Herman",
+    text: "A quiet couple, with a large house, Jean Khan and Ashley Herman are lifelong conservatives. It's not infrequent for dinner table conversation to involve an offhand comment about the 'democrats.' You have a stable, relatively wealthy home life. You have health insurance, you're alive - but your parents will struggle to support your transition.",
+    eventAction: function() {
+        statChange("Access to Healthcare" , -10);
+        statChange("Accepting Family" , false);
+        stats["Parents"] = "Jean Khan and Ashley Herman";
+        cont("The Early Years");
+    }
+},
+{
+    title: "Isabella Mayer and Alan Hawkins",
+    text: "A quiet couple, with a small house, Isabella Mayer and Alan Hawkins are not what anyone would call nice people. They're not particularly religious, not particularly affiliated with any political ideology. But you can expect life to be far from easy. You won't have health insurance.",
+    eventAction: function() {
+        statChange("Access to Healthcare" , -30);
+        statChange("Accepting Family" , false);
+        stats["Parents"] = "Sam & Anna Hutchinson";
+        cont("The Early Years");
+    }
+},
+
+// early childhood (easy)
+{
+    title: "Early Childhood",
+    text: "What was your early childhood like?",
+    eventAction: function() {
+        let earlyChildhoodOptions = [
+            {
+                text: "You had: A Very Happy Childhood. You were a very cheerful kid. When you were young, nothing seemed to bother you - you loved what you loved, you loved your family, you loved your dog, your school. Your caregivers were very involved in your upbringing, and this meant you were able to really power through the challenges you encountered. Your education was a breeze. You never really had anything seriously bad happen to you during this early phase in your life.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", +35);
+                },
+            }, 
+            {
+                text: "You had: A Moderately Happy Childhood. You were a comfortably happy kid. When you were young, nothing seemed to bother you - you loved what you loved, you loved your family, you loved your dog, your school. But as time went on, you began to see challenges: in school, with friends - your household wasn't quite as well off as the others at your school, and you had to grow up a bit younger than you would have liked. Still, things were okay. You had a few stuffed animals.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", +10);
+
+                },
+            }, 
+            {
+                text: "You had: An Isolated Childhood. You've been awkward for as long as you can remember - a bit of a klutz. It's not too common for you to break something and be reprimanded for it. Still, you did well. You spent a lot of time on your own - due to a combination of drive time (you lived far away from your school) and limited parental assistance, you didn't have friends when you were very young. You loved your family, you loved your dog, and you had fun at school. But as time went on, you began to see challenges: in school, with friends - your household wasn't quite as well off as the others at your school, and you had to grow up a bit younger than you would have liked. Things were okay.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -10);
+                },
+            },
+            {
+                text: "You had: A Challenging Childhood Education. You found it very difficult to succeed in school. You found your education frustrating and stressful - you learned to read late, and were never particularly good with numbers. Your teachers tried to help you, but at home, you were punished for your lack of focus and your lack of success - this created a feedback loop that made it harder to succeed at school. Still, you pulled through. You spent a lot of time on your own - due to a combination of drive time (you lived far away from your school) and limited parental assistance, you didn't have friends when you were very young. You loved your family, you loved your dog. Your household wasn't quite as well off as the others at your school, and you had to grow up a bit younger than you would have liked. Things were okay.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -10);
+                },
+            },  
+        ];
+        rand(earlyChildhoodOptions);
+    }
+},
+
+// early childhood (hard)
+{
+    title: "The Early Years",
+    text: "What was your early childhood like?",
+    eventAction: function() {
+        let earlyChildhoodOptions = [
+            {
+                text: "You had: A Very Unhappy Childhood. You were often expressionless. When you were young, nothing seemed to bother you - what happened to you would happen, and you would be stone-faced, expressionless. School was the one place you could focus all your energy - your education went well, in the early stages. Your caregivers were the kind to shout, to spank, to take - it was difficult for you to make it through a week without offending them somehow. Especially your mother - she made things... challenging. Small challenges could cause you to break down with anxiety and fear.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -20);
+                },
+            }, 
+            {
+                text: "You had: An Isolated Childhood. You've been awkward for as long as you can remember - a bit of a klutz. It's not too common for you to break something and be reprimanded for it. Still, you did well. You spent a lot of time on your own - due to a combination of drive time (you lived far away from your school) and limited parental assistance, you didn't have friends when you were very young. You loved your family, you loved your dog, and you had fun at school. But as time went on, you began to see challenges: in school, with friends - your household wasn't quite as well off as the others at your school, and you had to grow up a bit younger than you would have liked. Things were okay.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -10);
+                },
+            },
+            {
+                text: "You had: A Challenging Childhood Education. You found it very difficult to succeed in school. You found your education frustrating and stressful - you learned to read late, and were never particularly good with numbers. Your teachers tried to help you, but at home, you were punished for your lack of focus and your lack of success - this created a feedback loop that made it harder to succeed at school. Still, you pulled through. You spent a lot of time on your own - due to a combination of drive time (you lived far away from your school) and limited parental assistance, you didn't have friends when you were very young. You loved your family, you loved your dog. Your household wasn't quite as well off as the others at your school, and you had to grow up a bit younger than you would have liked. Things were okay.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -25);
+                },
+            },  
+            {
+                text: "You had: A Very Difficult Childhood. Despite appearances, your home was broken, and cruel. There was shouting - You found it very difficult to succeed in school. You found your education frustrating and stressful - you learned to read late, and were never particularly good with numbers. Your teachers tried to help you, but at home, you were punished for your lack of focus and your lack of success - this created a feedback loop that made it harder to succeed at school. Still, you pulled through. You spent a lot of time on your own - due to a combination of drive time (you lived far away from your school) and limited parental assistance, you didn't have friends when you were very young. You loved to draw, you loved your dog.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -30);
+                },
+            },  
+            {
+                text: "Oh, no... your home life was a living nightmare. Despite appearances, your home was broken, and cruel. You were often expressionless. When you were young, you often cried involuntarily for no discernible reason. School was a nightmare too - you were often bullied for dirty clothes and for your smell. Your caregivers were the kind to shout, to spank, to take, to slap, to push - it was difficult for you to make it through a day without offending them somehow. Especially your mother - she made things... challenging. Appeasing her was a constant neverending struggle. Small challenges could cause you to break down with anxiety and fear.",
+                go: "Adolescence",
+                buttonText: "Continue",
+                eventAction: function() {
+                    statChange("Mental Health", -35);
+                },
+            },  
+        ];
+        rand(earlyChildhoodOptions);
+    }
+},
+
+// Adolescence
+{
+    title: "Adolescence",
+    text: 
+    "You're growing up fast." + 
+    "<br><br>" + 
+    "Since you were young, you may have known something wasn't quite right. Perhaps you didn't feel like you fit in, you felt uncomfortable in situations where gender was important. This could look any number of ways - maybe it was clothing, maybe behavior, maybe something else brought it to your attention." + 
+    "<br><br>" + 
+    "For a lot of people, it's physical; maybe you noticed a bristle of hair on your chin, and it filled you with a sense of dread, disconnect, discomfort. Maybe it was a social interaction - some time in your life when someone called you 'he'. Maybe something subtler. Maybe someone told you 'no, that's for the girls,' and you wanted to protest, but couldn't." + 
+    "<br><br>" + 
+    "Or it could be something else. The trans experience of childhood is as diverse as the cis one.",
+    eventAction: function() {
+        stats["Life Stage"] = "Adolescence";
+        stats["Age"] = 12;
+        if (stats["Age Of Realization"] <= 14) {
+            cont("Adolescent Realization", "You're putting it together now...");
+        } else {
+            didntRealizeText = 
+            "Regardless, you didn't quite realize what was wrong when you were still this young.";
+            createTextElement ('p', 'pageTextParagraph', didntRealizeText, pageWrapper);
+            cont("High School");
+        }
+    }
+},
+
+// High School
+{
+    title: "High School",
+    text: 
+
+    "Ahh - high school; a stressful time in anyone's life, and more so for you." + 
+    "<br><br>" + 
+    "You're beginning to feel the effects of puberty - a few hairs here, voice a little deeper there. You're starting to feel a creeping horror about your body. You smell different now. You look different. It's hard at first to put your finger on why, but it's there - your face shape has changed. Your brow is a bit more distinct. Your face looks less childlike. You're growing into a young man." +
+    "Your sister's begun to develop differently. You can see this, and it feels jarring." +
+    "<br><br>" + 
+    "You feel uncomfortable, most of the time. It's background noise at this point, but it's there." +
+    "<br><br>" + 
+    "You're taller now.",
+
+    eventAction: function() {
+        stats["Life Stage"] = "High School";
+        stats["Age"] = 14
+        if (stats["Age Of Realization"] <= 14) {
+            cont("Maybe?", "What next?");
+        } else {
+            cont("High School - Continued", "This hurts.");
+        }
+    }
+}, 
+{
+    title: "High School - Continued",
+    text: 
+
+    "It's becoming more and more obvious to you as you get older that you're really uncomfortable in your own skin.",
+
+    eventAction: function() {
+        // intro
+        function textChainCallback () {
+            if (stats["Age Of Realization"] <= 18) {
+                cont("Adolescent Realization", "What next?");
+            } else if (stats["Age Of Realization"] > 18) {
+                cont("Time passes.", "What next?");
+            }
+        };
+        textChain([
+            "It feels like your body is betraying you - every new development, every small change feels like a curse. Their permanence fills you with the kind of fear that you struggle to confront directly. ",
+            "At the same time, you are equal parts afraid, and ashamed - what you feel is far from socially acceptable. You wonder whether you're just a sexual deviant. You feel dirty, you hide everything without being prompted.",
+            "But that doesn't make it go away. Shame just makes it hurt, it makes you stare into your ceiling at night, still, passively hair on your legs against the sheets, feeling the discomfort of sweat and acne, a pit in your stomach."
+        ], textChainCallback);
+        stats["Age"] = 16;
+    }
+},
+
+// Higher Education 
+{
+    title: "Higher Education",
+    text: 
+
+    "College age is upon you." +
+    "<br><br>" + 
+    "As an average (pretty much) middle-class American, you had it drilled into you how important college is. You knew from early grade school that you were aiming to get here, and you got here. Congrats!" +
+    "<br><br>",
+
+    eventAction: function() {
+        stats["Age"] = 18;
+        stats["Life Stage"] = "Higher Education";
+        cont("Higher Education - Continued")
+    }
+},
+{
+    title: "Higher Education - Continued",
+    text: 
+
+    "It's been a few years, and you've grown up." +
+    "<br><br>" + 
+    "Your shoulders have broadened, your brow has deepened, your hairline receded. You have coarse, thick body hair, and facial hair. In other words, your development is progressing as expected." +
+    "<br><br>" + 
+    "For a while, you were able to push it down. But now it's back again. You feel it, the creeping despair that touches you, once in a while. This is all permanent, this change to you. This is your body - you've got one chance at life on earth, and you got this. You had a chance for it to be easy - now it will never be easy. You missed the boat." +
+    "<br><br>" + 
+    "Although you may project interest in some things, the very core of you is suffused with hopelessness. " + "<br><br>" +
+    "You look like any other guy." ,
+
+    eventAction: function() {
+        cont("Higher Education - Continued 2");
+    }
+},
+{
+    title: "Higher Education - Continued 2",
+    text: "",
+
+    eventAction: function() {
+        if (stats["Age Of Realization"] > 23) {
+            inputString = "You keep failing out of college. You've taken on a few odd jobs, but you're floundering. At the age of " + stats["Age Of Realization"] + ", you find yourself still stuggling to finish school.";
+            createTextElement ('p', 'pageTextParagraph', inputString, pageWrapper);
+        }
+        function textChainCallback () {
+            cont("Higher Education - Continued 3");
+        }
+        textChain([ 
+            "You're still suffering.",
+            "You're away at school, which is good - more opportunity for exploration. New people, a new community. You were even brave enough to get drunk at the gay bar - you don't remember much about what happened after.",
+            "But at least that night you felt certain of something."
+        ], textChainCallback);
+    }
+},
+{
+    title: "Higher Education - Continued 3",
+    text: 
+
+    "One night, you have a dream - you are a child again.",
+
+    eventAction: function() {
+        function textChainCallback () {
+            cont("Transition", "You know what you have to do.");
+        }
+        textChain([
+            "A curtain of straight hair hangs in front of your face. You feel small, for the first time in a long time. You feel comfortable in place again; the awful feeling that haunts your waking life is gone for a moment.",
+            "You hear someone calling you from the other room.",
+            "You don't quite catch the name, but you they were calling for you. You know it was the right name. The one you use for yourself, when you can get away from your shame.",
+            "Later that night, you're returned to your late grandfather's funeral. Rain patters at your umbrella; you're surrounded by a sea of black suits, anonymous figures. You're back in your own body, but your figure is grossly distorted, overemphasized. You tower like a giant above the crowd of mourners. You catch a glimpse of yourself in a puddle - through the rippling surface, you see a reflection you cannot bear to look at.",
+            "Looking ahead, you see on your grandfather's grave the name he passed on to you.",
+            "A deep determination fills you."
+        ], textChainCallback);
+    }
+},
+
+// Early Adulthood 
+{
+    title: "Early Adulthood",
+    text: 
+
+    "You get a phone call from your parents." +
+    "<br><br>" + 
+    "They've reconsidered - this was very unlikely to happen. You thought they were set in stone - after so much rejection, you didn't think they had it in them to understand." +
+    "<br><br>" + 
+    "You cried, they cried.",
+
+    eventAction: function() {
+        statChange("Accepting Family", true);
+        cont("Transition", "You finally, finally get to move forward.");
+    }
+},
+
+// Adulthood 
+{
+    title: "Adulthood",
+    text: 
+
+    " " +
+    "<br><br>" + 
+    " ",
+
+    eventAction: function() {
+    }
+},
+
+// transition
+{
+    title: "Maybe?",
+    text: 
+
+    "You begin seriously thinking about actually doing something about transition.",
+
+    eventAction: function() {
+        cont("Transition");
+    }
+},
+{
+    title: "Transition",
+    text: "",
+
+    eventAction: function() {
+        var out = stats["Out To Parents"];
+        var acceptance = stats["Accepting Family"];
+        var ageOfRealization = stats["Age Of Realization"];
+        var age = stats["Age"];
+        var lifeStage = stats["Life Stage"];
+
+        createTextElement ('p', 'pageTextParagraphItalics', 
+            "(The following is not random, it's generated based on your previous results.)", 
+        pageWrapper);
+
+        var resultString = "";
+        function resultText() {
+            createTextElement ('p', 'pageTextParagraph', resultString, pageWrapper);
+            resultString = "";
+        }
+
+        function calculateTextAndNextPage () {
+            if (age < 18) {
+                resultString += "Looks like you're a minor, so you're going to need support from your parents. ";
+            } else if (age >= 18) {
+                resultString += "Since you're an adult, you could start the process before you feel able to tell people. But you're going to need financial help from your parents, otherwise the process will be simply too expensive for you."
+            }
+            if (out && acceptance) {
+                resultString += "<br><br>And you're lucky enough to have it. Congrats, you're going to be able to move forward. ";
+                resultText();
+                cont("Transition Step - Moving Forward");
+                return;
+            } else if (!out) {
+            resultString += "Which means you're going to need to tell your parents. ";
+                resultText();
+                cont("Transition Step - Tell Parents");
+                return;
+            } else if (!acceptance) {
+                resultString += "You'll need them on your side. You're going to need to convince your parents to support you. "
+                resultText();
+                cont("Transition Step - Convince Parents");
+            }
+        }
+        calculateTextAndNextPage();
+    }
+},
+{
+    title: "Transition Step - Tell Parents",
+    text: 
+
+    "You decide to come out to your parents.",
+    eventAction: function() {
+        rand([
+            {
+                text: "That didn't go too badly.",
+                go: "Transition",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    if (stats["Accepting Family"]) {
+                        var familyAcceptanceTrue = "Good news - they're kind and respectful. It will be a process, bringing them around and educating them, but you're confident it will go well with them in the future. You're very relieved - a huge weight has been lifted from your shoulders.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceTrue, pageWrapper);
+                        statChange("Mental Health", +30);
+                        statChange("Out To Parents", true);
+                    } else {
+                        var familyAcceptanceFalse = "They surprise you with acceptance and understanding - sometimes, it can be easier for people to understand this kind of thing when it happens to the people around them. You're elated - a huge weight has been lifted from your shoulders.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceFalse, pageWrapper);
+                        statChange("Mental Health", +35);
+                        statChange("Accepting Family", true);
+                        statChange("Out To Parents", true);
+                    }
+                },
+            },  
+            {
+                text: "Oh boy... they don't take it well at all.",
+                go: "Transition Step - Not Right Now",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    if (stats["Accepting Family"]) {
+                        var familyAcceptanceTrue = "Sometimes people can surprise you in a bad way. It can be hard to grasp, and sometimes the abstract is easier to respect than the nearby.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceTrue, pageWrapper);
+                        statChange("Accepting Family", false);
+                        statChange("Out To Parents", true);
+                        statChange("Mental Health", -25);
+                    } else {
+                        var familyAcceptanceFalse = "That was probably going to happen. They were not likely to be accepting.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceFalse, pageWrapper);
+                        statChange("Mental Health", -15);
+                        statChange("Out To Parents", true);
+                    }
+                },
+            },  
+            {
+                text: "They're unsure, conflicted. It's caught them by surprise. Maybe they didn't see signs, maybbe you didn't have many visible signs. Maybe they are mourning the future they imagined for you. They'll need time to come around.",
+                go: "Transition Step - Not Right Now",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    createTextElement ('p', 'pageTextParagraphItalics', "You feel anxious about this.", pageWrapper);
+                    statChange("Mental Health", -10);
+                    statChange("Accepting Family", false);
+                    statChange("Out To Parents", true);
+                },
+            },  
+        ]);
+    }
+},
+{
+    title: "Transition Step - Convince Parents",
+    text: 
+
+    "You need to convince your parents to trust you, and your decision. You need to convince them that transition is not only a constructive life choice, but you're going to have to quickly bring them through the transphobia that you yourself had to overcome. A tall order.",
+
+    eventAction: function() {
+        function textChainCallback () {
+            randResultFromDiscussion();
+        }
+        textChain(["You start by talking to them about your experiences in the years leading up to this. You tell them about the isolation you feel, how you feel about your body, how you feel about your social role, and how people percieve you.", "You try to convey what it's like to be in your skin.", "You try to fight back tears, but you are unsuccessful."], textChainCallback);
+
+        function randResultFromDiscussion() {
+            rand([
+                {
+                    text: "They are moved. You feel weak from relief.",
+                    go: "Transition",
+                    buttonText: "Continue >>",
+                    eventAction: function() {
+                        statChange("Mental Health", +10);
+                        statChange("Accepting Family", true);
+                    },
+                },  
+                {
+                    text: "They remain unpersuaded.",
+                    go: "Transition Step - Not Right Now",
+                    buttonText: "Oh...",
+                    eventAction: function() {
+                        statChange("Mental Health", -10);
+                    },
+                },  
+            ]);
+        }
+    }
+},
+{
+    title: "Transition Step - Is It Affordable?",
+    text: 
+
+    "But can you afford transition?" +
+    "<br><br>" + 
+    "Transition is probably one of the most expensive things you'll ever do - you'll need to buy a huge variety of things. Your cost of living will be a lot higher for a few years, and your medical expenses could be really huge. You're going to need a good income." +
+    "<br><br>" + 
+    "Even the first part of medical transition (a few doctor's appointments) could easily be impossible to afford.",
+
+    eventAction: function() {
+        rand([
+            {
+                text: "It looks like your financial resources are not sufficient. You can't even afford the first part of medical transition, let alone the ongoing expenses, or surgery.",
+                go: "Transition Step - Not Right Now",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    statChange("Mental Health", -10);
+                    statchange("Access to Healthcare", -10);
+                },
+            },  
+            {
+                text: "It's going to be really difficult, but you'll try.",
+                go: "Transition Step - Moving Forward",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    statChange("Mental Health", +10);
+                    statchange("Access to Healthcare", +10);
+                },
+            },  
+            {
+                text: "It looks like you're going to be able to do it.",
+                go: "Transition Step - Moving Forward",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    statChange("Mental Health", +10);
+                    statchange("Access to Healthcare", +10);
+                },
+            },  
+        ]);
+    }
+},
+{
+    title: "Transition Step - Not Right Now",
+    text: 
+
+    "Transition isn't in the cards for you right now. You're going to have to wait.",
+
+    eventAction: function() {
+        cont("Time passes.", "You grow up a little further.");
+    }
+}, 
+{
+    title: "Transition Step - Moving Forward",
+    text: 
+
+    "The door of the therapist's office clangs shut. You take a seat in the waiting room.",
+
+    eventAction: function() {
+        cont("The Gender Therapist", "Look around")
+    }
+},
+{   
+    title: "The Gender Therapist",
+    text: "",
+    eventAction: function() {
+        var resultString = "Your first impressions were... not great. ";
+        function getRandom (max) {
+            return Math.floor(Math.random() * Math.floor(max)) + 1;
+        }
+        var officeRoll1 = getRandom(3);
+        var officeRoll2 = getRandom(3) + officeRoll1;
+        var officeRoll3 = getRandom(3) + officeRoll2;
+        resultString += (therapistTraits[officeRoll1]+therapistTraits[officeRoll2]+therapistTraits[officeRoll3]); 
+        createTextElement ('p', 'pageTextParagraph', resultString, pageWrapper);
+        cont("The Gender Therapist - Continued 1", "You're called in...");
+    }
+},
+{   
+    title: "The Gender Therapist - Continued 1",
+    text: "Her beady little eyes burrowed into your appearance.",
+    eventAction: function() {
+        function textChainCallback () {
+            var resultString = "At the end of the appoitment, she shuffles her notes, and says, bluntly: <bn><bn>";
+            if (stats["Age of realization"] < 18) {
+                resultString += "'You're too young to make a decision this important.'"; 
+            } else {
+                resultString += "'You realized too late - it's my professional opinion that your desire for 'transition' is sexually motivated, and therefore I cannot in good conscience participate in it.'"; 
+            }
+            createTextElement ('p', 'pageTextParagraphItalics', resultString, pageWrapper);
+            cont("The Gender Therapist - Continued 2", "Maybe the next one will be better...");
+        };
+        textChain([
+            "'It says here you're... a transsexual.'", 
+            "'Do you have any other paraphilias?'", 
+            "'When were your first thoughts of gender?'", 
+            "'Was your father absent?''", 
+            "'Tell me about your sexuality.'", 
+            "'Do you find yourself compelled to do sexually motivated things you'd rather not do?'",
+            "'What about femaleness exactly do you find sexually arousing?'",
+            "You stumble through your answers, shocked, dismayed, confused, and ashamed."
+        ], textChainCallback);
+    }
+},
+{   
+    title: "The Gender Therapist - Continued 2",
+    text: "",
+    eventAction: function() {
+        var resultString = "Your first impressions of this office were a little better, but not amazing.";
+        function getRandom (max) {
+            return Math.floor(Math.random() * Math.floor(max)) + 1;
+        }
+        var officeRoll1 = 5;
+        var officeRoll2 = getRandom(3) + 5;
+        resultString += (therapistTraits[officeRoll1]+therapistTraits[officeRoll2]); 
+        createTextElement ('p', 'pageTextParagraph', resultString, pageWrapper);
+        cont("The Gender Therapist - Continued 3", "You're called in...");
+    }
+},
+{   
+    title: "The Gender Therapist - Continued 3",
+    text: "He leans back in his chair, attentive and amiable.",
+    eventAction: function() {
+        function textChainCallback () {
+            var resultString = "At the end of the appoitment, he shuffles his notes, and says: <bn><bn>";
+            if (stats["Age of realization"] < 18) {
+                resultString += "'Well, I follow the international guidelines, so unfortunately I can only recommend you for a hormone blocker at this point. But we'll put you on the path to HRT.'"; 
+            } else {
+                resultString += "'The good news is, since you're an adult, you can get HRT on informed consent in a lot of the country now, including here. Here's the address...'"; 
+            }
+            createTextElement ('p', 'pageTextParagraphItalics', resultString, pageWrapper);
+            cont("To be continued...");
+        };
+        textChain([
+            "'Tell me what brings you here.'", 
+            "'What's your identity like?'", 
+            "'What do you want out of transition?'", 
+            "'Do you have a support network at home? Supportive friends? Partners? Siblings?'", 
+            "'What kinds of avenues of gender expression have you explored?'", 
+            "'What kinds of dysphoria do you experience?'",
+            "'What do you want to do next?'",
+            "After your previous experience, you're feeling pretty good about this."
+        ], textChainCallback);
+    }
+},
+{
+    title: "To be continued...",
+    text: 
+
+    "Thank you for playing!",
+
+    eventAction: function() {
+    }
+},
+
+
+// Adolescent Coming Out/Staying In
+{
+    title: "Adolescent Realization",
+    text: 
+
+    "Regardless, you're just beginning to understand that it's something buried in your identity. It's not something that needs fixing, it's a part of you. You've figured it out. Well done - most people don't manage it this young." +
+    "<br><br>" + 
+    "Now what do you do?",
+    eventAction: function() {
+        choose([
+            {
+                text: "Tell your parents",
+                go: "Tell your parents (Adolescence)",
+            },  
+            {
+                text: "Tell a friend",
+                go: "Tell a friend (Adolescence)",
+            },  
+            {
+                text: "Keep it to yourself for now",
+                go: "Keep it to yourself for now (Adolescence)",
+            },  
+        ]);
+    }
+},
+
+{
+    title: "Tell your parents (Adolescence)",
+    text: 
+
+    "You consider telling your family. Is your family accepting?",
+
+    eventAction: function() {
+        if (displayStat("Accepting Family")) {
+            var familyAcceptanceTrue = "It looks like you're probably going to do alright, if you come out. Do you want to roll the dice?";
+            createTextElement ('p', 'pageTextParagraph', familyAcceptanceTrue, pageWrapper);
+        } else {
+            var familyAcceptanceFalse = "It looks like coming out to your family might not be such a good idea right now. Your family might not take this well. Are you sure you want to roll the dice?";
+            createTextElement ('p', 'pageTextParagraph', familyAcceptanceFalse, pageWrapper);
+        }
+        choose([
+            {
+                text: "Tell them",
+                go: "What do your parents think? (Adolescence)",
+            },  
+            {
+                text: "Keep it to yourself for now",
+                go: "Keep it to yourself for now (Adolescence)",
+            },  
+        ]);
+    }
+},
+{
+    title: "What do your parents think? (Adolescence)",
+    text: 
+
+    "Let's find out whether your dice roll pays off.",
+
+    eventAction: function() {
+        rand([
+            {
+                text: "That didn't go too badly.",
+                go: "Maybe?",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    if (stats["Accepting Family"]) {
+                        var familyAcceptanceTrue = "Good news - they're kind and respectful. It will be a process, bringing them around and educating them, but you're confident it will go well with them in the future. You're very relieved - a huge weight has been lifted from your shoulders.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceTrue, pageWrapper);
+                        statChange("Mental Health", +30);
+                        statChange("Out To Parents", true);
+                    } else {
+                        var familyAcceptanceFalse = "They surprise you with acceptance and understanding - sometimes, it can be easier for people to understand this kind of thing when it happens to the people around them. You're elated - a huge weight has been lifted from your shoulders.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceFalse, pageWrapper);
+                        statChange("Mental Health", +35);
+                        statChange("Accepting Family", true);
+                        statChange("Out To Parents", true);
+                    }
+                },
+            },  
+            {
+                text: "Oh boy... they don't take it well at all.",
+                go: "Maybe?",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    if (stats["Accepting Family"]) {
+                        var familyAcceptanceTrue = "Sometimes people can surprise you in a bad way. It can be hard to grasp, and sometimes the abstract is easier to respect than the nearby.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceTrue, pageWrapper);
+                        statChange("Accepting Family", false);
+                        statChange("Out To Parents", true);
+                        statChange("Mental Health", -25);
+                    } else {
+                        var familyAcceptanceFalse = "That was probably going to happen. They were not likely to be accepting.";
+                        createTextElement ('p', 'pageTextParagraph', familyAcceptanceFalse, pageWrapper);
+                        statChange("Mental Health", -15);
+                        statChange("Out To Parents", true);
+                    }
+                },
+            },  
+            {
+                text: "They're unsure, conflicted. It's caught them by surprise. Maybe they didn't see signs, maybbe you didn't have many visible signs. Maybe they are mourning the future they imagined for you. They'll need time to come around.",
+                go: "Maybe?",
+                buttonText: "Continue >>",
+                eventAction: function() {
+                    createTextElement ('p', 'pageTextParagraphItalics', "You feel anxious about this.", pageWrapper);
+                    statChange("Mental Health", -10);
+                    statChange("Accepting Family", false);
+                    statChange("Out To Parents", true);
+                },
+            },  
+        ]);
+    }
+},
+{
+    title: "Tell a friend (Adolescence)",
+    text: 
+
+    "You decide to tell a friend you trust, Kyle. You feel safest communicating with him.",
+
+    eventAction: function() {
+        rand([
+            {
+                text: "He betrays your trust. Not only is he uncomfortable with it, he's angry and confused. He doesn't talk to you after that conversation for a while - when you see him next, he pretends not to see you.",
+                go: "The bird has flown the nest (Adolescence)",
+                buttonText: "Ouch...",
+                eventAction: function() {
+                    statChange("Mental Health", -10);
+                },
+            },  
+            {
+                text: "He's uncomfortable with it. He doesn't talk to you for a few days - when you see him next, he pretends not to see you.",
+                go: "The bird has flown the nest (Adolescence)",
+                buttonText: "Ouch...",
+                eventAction: function() {
+                    statChange("Mental Health", -5);
+                },
+            },  
+            {
+                text: "He takes it well. You're relieved.",
+                go: "The bird has flown the nest (Adolescence)",
+                buttonText: "Whew...",
+                eventAction: function() {
+                    statChange("Mental Health", +10);
+                },
+            },  
+            {
+                text: "He takes it really well! He had a sense that something was different about you. He gives you a heartfelt hug. You've gained a wonderful ally.",
+                go: "The bird has flown the nest (Adolescence)",
+                buttonText: "Whew...",
+                eventAction: function() {
+                    statChange("Mental Health", +15);
+                },
+            },  
+        ]);
+    }
+},
+{
+    title: "The bird has flown the nest (Adolescence)",
+    text: 
+
+    "You notice the next day at school you're getting a lot of... looks. Whispers." +
+    "<br><br>" + 
+    "Looks like Kyle may have... told someone else. Who told someone else. Who told someone else. Everyone knows." +
+    "<br><br>" + 
+    "Including your parents.",
+
+    eventAction: function() {
+        statChange("Outed Involuntarily", true);
+        cont("What do your parents think? (Adolescence)", "Oops.");
+    }
+},
+
+{
+    title: "Keep it to yourself for now (Adolescence)",
+    text: 
+
+    "You decide it's safest to keep it to yourself.",
+
+    eventAction: function() {
+        cont("Time passes.", "Continue >>");
+    }
+},
+
+// advancing a life stage (pretrans)
+{
+    title: "Time passes.",
+    text: "Life goes on.",
+    eventAction: function() {
+        if (stats["Life Stage"] === "Adolescence") {
+            cont("High School"); 
+        } else if (stats["Life Stage"] === "High School") {
+            cont("Higher Education");
+        } else if (stats["Life Stage"] === "Higher Education") {
+            cont("Early Adulthood");
+        } else if (stats["Life Stage"] === "Early Adulthood") {
+            cont("Adulthood");
+        }
+    }
+},
+
+
+{
+        title: "Passability",
+        text: "It's important to you that you look like your peers, like your friends, like society expects you to look. You're worried that you won't match the standard that the world has for you, and you know this will have a big impact on the rest of your life. Let's see how you're doing, appearance-wise.",
+        eventAction: function() {
+            var age = stats["Age Of Transition"];
+            var newPassingValue;
+            // prepubertal
+            if (age <= 11) {
+            }
+            // early puberty
+            if (age >= 12 && age <= 15) {
+                newPassingValue = -25;
+            }
+            // late puberty
+            if (age >= 16 && age <= 23) {
+                newPassingValue = -55;
+            }
+            // post-puberty, early adult life
+            if (age >= 24 && age <= 35) {
+                newPassingValue = -65;
+            }
+            // middle aged
+            if (age >= 36 && age <= 59) {
+                newPassingValue = -75;
+            }
+            // late
+            if (age >= 60) {
+                newPassingValue = -85;
+            }
+            statChange("Passing", newPassingValue);
+            cont("Parents");
+        }
+},
+
+];
+
+/*
+
+    USER ACTIONS (THESE ARE FOR THE SCRIPT)
+
+*/
+
+function cont (targetPage, buttonText, isDirect = false) {
+
+    function findInArrayByProperty(inputArray, attributeToSearchFor, valueOfAttribute) {
+        for (var i = 0; i < inputArray.length; i+= 1) {
+            if (inputArray[i][attributeToSearchFor] === valueOfAttribute) {
+                return i;
+            }
+        }
+    }
+
+    if (buttonText === undefined) {
+        buttonText = targetPage;
+    }
+
+    var targetPageNumber = 0; 
+    if (typeof targetPage === "number") {
+        targetPageNumber = targetPage;
+    } else if (typeof targetPage === "string") {
+        targetPageNumber = findInArrayByProperty(eventArray, "title", targetPage);
+    } else { 
+        targetPageNumber = undefined; 
+    }
+
+    // if it's direct, go straight to the page - if not, create a button
+    if (isDirect){
+        createPage(targetPageNumber);
+    } else {
+        function createPageCallback (){
+            createPage(targetPageNumber);
+        }
+        createButton(buttonText, pageWrapper, createPageCallback);
+    }
+};
+
+function rand (paths) {
+    var clicked = false;
+    function displayResult () {
+        if (!clicked) {
+            // fix this when you 
+            result = paths[Math.floor(Math.random()*paths.length)];
+            createTextElement('p', 'pageTextParagraph', result.text, pageWrapper);
+            result.eventAction();
+            cont(result.go, result.buttonText);
+            clicked = true;
+        }
+    }
+    createButton("Discover your fate...", pageWrapper, displayResult);
+};
+
+function choose (paths) {
+    paths.forEach(path => {
+        cont(path.go, path.text);
+    });
+};
+
+function statChange (statName, newStatValue) {
+    var result;    
+
+    // for everything
+    if (!(typeof newStatValue === "boolean")) {
+        stats[statName] += newStatValue;
+        result = "   " + newStatValue.toString() + " " + statName;
+        if (newStatValue > 0) {
+            result = "+" + result;
+        }
+        createTextElement('p', 'pageTextParagraphItalics', result, pageWrapper);
+    } else { 
+        stats[statName] = newStatValue;
+        if (stats[statName]) {
+            result = statName + "? Yes.";
+        } else {
+            result = statName + "? No.";
+        }
+        createTextElement('p', 'pageTextParagraphItalics', result, pageWrapper);
+    }
+    
+    // for special stats
+    if (statName === "Passing") {
+        passingChange();
+    }
+
+    // update currentPageData
+    currentPageData.statChanges[statName] = newStatValue;
+};
+
+function displayStat (statName) {
+    var result;    
+
+    // for everything
+    if (stats[statName] === true || stats[statName] === false ) {
+        if (stats[statName]) {
+            result = statName + "? Yes.";
+        } else {
+            result = statName + "? No.";
+        }
+    } else { 
+        result = statName + " = " + stats[statName].toString();
+    }
+    createTextElement('p', 'pageTextParagraphItalics', result, pageWrapper);
+
+    // for special stats
+    if (statName === "Passing") {
+        passingChange();
+    }
+
+    return stats[statName];
+};
+
+function checkBuff (checkBuffInput) {
+    // check to see if a buff is in currentBuffsOrDebuffs[]
+    if (currentBuffsOrDebuffs.length != 0) {
+        for(var i = 0; i < currentBuffsOrDebuffs.length; i++) {
+            if (currentBuffsOrDebuffs[i].type === checkBuffInput) {
+                return i;
+            } else if (currentBuffsOrDebuffs[i].name === checkBuffInput) {
+                return i;
+            } else {
+                return -1;
+            }
+        }
+    } else {
+        return -1;
+    }
+};
+
+function addBuff (buff, goingBack = false) {
+    for (var i = 0; i < buffDebuff.length; i++) {
+        if (buffDebuff[i].name === buff) {
+            currentBuffsOrDebuffs.push(buffDebuff[i]);
+            if (goingBack === false) {
+                currentPageData.addBuff[buff] = 0;
+            }
+            return;
+        }
+    }
+};
+
+function removeBuff (buff, goingBack = false) {
+    // buff may be a name or a type
+    var checkResult = checkBuff(buff);
+    if (checkResult != -1) { // found a buff
+        if (goingBack === false) {
+            currentPageData.removeBuff[currentBuffsOrDebuffs[checkResult].name] = 0;
+        }
+        currentBuffsOrDebuffs.splice(checkResult, 1);
+    }
+};
+
+function changeBuff (buffType, newBuff) {
+    removeBuff(buffType);
+    addBuff(newBuff);
+};
+
+function checkBuffOfType (buffType) {
+    var currentBuffOfType = checkBuff(buffType);
+    if (currentBuffOfType != -1) {
+        return buffDebuff[currentBuffOfType];
+    }
+};
+
+/*
+
+    SPECIFIC STAT CHANGE FUNCTIONS
+
+*/
+
+function passingChange() {
+    // fix the stat
+    if (stats["Passing"] < 0) {
+        stats["Passing"] = 0;
+    }
+
+     // change the buff
+    var passingLevel = Math.floor((stats["Passing"])/20);
+    var passingBuffName = "Passing " + passingLevel.toString();
+    changeBuff("Passing", passingBuffName);
+
+    // text 
+    var passingLevelDetails = checkBuffOfType("Passing");
+    createTextElement ('p', 'pageTextParagraphItalics', passingLevelDetails.text, pageWrapper);
+
+    // stats change
+
+};
+
+/*
+
+    GENERATE PAGE ELEMENTS
+
+*/
+
+function createTextElement (
+        elementType,            // 'p' or 'h1'
+        elementClass,           // 'pageTitle' or 'pageTextParagraph'  
+        inputString,            // 'blah'
+        elementToAttachItTo     // the page wrapper
+    ) {
+    createdElement = document.createElement(elementType);
+    createdElement.classList.add(elementClass);
+    appendChildElement = elementToAttachItTo.appendChild(createdElement);
+    appendChildElement.innerHTML = inputString;
+};
+
+function createButton (inputString, elementToAttachItTo, onClick) {
+    createdButton = document.createElement('button');
+    createdButton.addEventListener("click", onClick);
+    createdButton.innerHTML = inputString;
+    elementToAttachItTo.appendChild(createdButton);
+};
+
+function textChain (inputArray, callback) {
+    var index = 0;
+    function renderParagraph() {
+        createTextElement('p1', 'pageTextParagraph', inputArray[index++] + "<br><br>", pageWrapper);
+        if (index < inputArray.length) {
+            function buttonCallback() { 
+                renderParagraph();
+                var button = document.getElementById("textChainContinueButton");
+                button.remove(); 
+            };
+            createdButton = document.createElement('button');
+            createdButton.id = "textChainContinueButton";
+            createdButton.addEventListener("click", buttonCallback);
+            createdButton.innerHTML = "Continue >>";
+            pageWrapper.appendChild(createdButton);
+        } else {
+            callback();
+        }
+    }
+
+    renderParagraph();
+}
+
+/* 
+
+    PAGES 
+
+*/
+
+function createPage (inputPageNumber, goingBack = false) {
+
+    // page history stuff
+    if (currentPageData.pageNumber != inputPageNumber) {
+        if (currentPageData.pageNumber != 0 && goingBack === false) {
+            addToPageHistory();
+        }
+        currentPageData.pageNumber = inputPageNumber;
+        currentPageData.statChanges = {};
+        currentPageData.addBuff = {};
+        currentPageData.removeBuff = {};
+    }
+
+    page = document.getElementById('page');
+    currentPage = document.getElementById("pageWrapper");
+
+    // remove previous page
+    if (currentPage != null) {
+        currentPage.remove();
+    }
+
+    // create page wrapper and add it to the dom
+    pageWrapper = document.createElement('div');
+    pageWrapper.setAttribute("id", "pageWrapper");
+    appendChildElement = page.appendChild(pageWrapper);
+
+    // create title and add it to the wrapper
+    createTextElement('h1', 'pageTitle', eventArray[inputPageNumber].title, pageWrapper);
+
+    // create body and add it to the wrapper - PARSE TEXT HERE
+    createTextElement('p', 'pageTextParagraph', eventArray[inputPageNumber].text, pageWrapper);
+
+    // do eventAction
+    eventArray[inputPageNumber].eventAction();
+};
+
+function destroyPage (inputPageNumber) {
+
+}
+
+function backPage () {
+    if (currentPageData.pageNumber != 0) {
+        // dump current page
+        addToPageHistory();
+
+        // reversing stat changes for the current page, then the previous page
+        for (var a = 0; a < 2; a++) {
+            var changes = pageHistory[pageHistory.length - 1];
+            if (Object.keys(changes.statChanges).length != 0) {
+                for (const property in changes.statChanges) {
+                    stats[property] -= changes.statChanges[property];
+                }
+            }
+            if (Object.keys(changes.addBuff).length != 0) {
+                for (const property in changes.addBuff) {
+                    removeBuff(property, true);
+                }
+            }
+            if (Object.keys(changes.removeBuff).length != 0) {
+                for (const property in changes.removeBuff) {
+                    addBuff(property, true);
+                }
+            }
+            // removing old page history from page history array, if it's not the first page
+            if (pageHistory[pageHistory.length - 1].pageNumber != 0) {
+                pageHistory.pop();
+            }
+
+            // go to the new page
+            if (a === 0) {
+                createPage(pageHistory[pageHistory.length - 1].pageNumber, true)
+            }
+        }
+
+    }
+}
+
+function endGame () {
+    pageNumber = eventArray.length;
+};
+
+</script>
+
+<style>
+    
+    .hidden{
+        display: none;
+    }
+
+    /*   Things   */
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    #page {
+        display: flex;
+        justify-content: center;
+    }
+
+    button {
+        height: 30px;
+    }
+
+    #menuBar {
+        width: 100% - 20px;
+        height: 30px;
+        padding: 10px 10px 10px 10px;
+        background-color: rgb(154, 226, 187);
+
+    }
+
+    #backButton {
+        width: 100px;
+    }
+
+    #pageWrapper {
+        padding: 30px;
+        margin: 30px;
+        width: 75%;
+        background-color: rgb(220, 245, 232);
+    }
+
+    .pageTitle {
+        color: grey;
+        font-style: italic;
+    }
+
+    .pageTextParagraph {
+        color: rgb(0, 0, 0);
+    }
+
+    .pageTextParagraphItalics {
+        font-style: italic;
+        color: rgb(0, 0, 0);
+    }
+
+</style> 
+
+</head>
+<body onload="createPage(0)">
+
+    <div id="menuBar">
+        <button id="backButton" onclick="backPage()">&lt;&lt; back</button>
+        <div id="primaryStat"></div>
+        <div id="pageNumber"></div>
+        <div id="historyButton"></div>
+    </div>
+
+    <div id="page">
+    </div>
+
+</body>
+
+<!-- TODO & NOTES
+
+all rolls based on one number generation at the top here, so that all results can easily be regenerated for the end screen
+
+stats:
+race
+age 
+age of transition
+mental health
+attractiveness
+dysphoria
+money
+years spent
+education 
+career level
+number of romantic relationships
+romantic status
+self-acceptance
+
+array of objects
+    objects each have a roll function
+
+function to generate result string
+function to generate stats mod string
+
+start game calls a function to generate ui from the array
+generate
+    shows result
+    gives you a "next" button
+once array ends, display stats and give an ending
+
+start game button
+
+TODO
+
+0. fix rand() randomness for back button
+1. stats
+2. DONE: make an eventAction that ends the game
+3. remember: create advanced navigation by setting the pageNumber to different things
+4. continue function + click anywhere to continue
+7. gui for pathways and adding pages
+8. top menu bar - page number, history, stats
+9. change "event" language to "page" language
+10. github
+11. divide into multiple files
+12. create compile option to compile to a single html document
+13. refactor for a page object
+14. refactor for asynchronous generation
+    a. scrolling text animation
+    b. cool title text animation
+15. obfuscation
+16. electron
+17. images (https://stackoverflow.com/questions/16191974/save-image-content-inside-html-file)
+    a. as page features
+    b. as choice features
+18. different styles of page separation + sentence-by-sentence division
+    1. low-key page separation (no title)
+    2. high-key page separation (title, bigger spacing)
+    3. non-automatic page deletion
+19. M U S I C
+
+example page
+1. title
+2. text
+3. text
+4. text
+3. next
+
+1. title
+2. text
+3. text
+4. text
+3. random choice
+4. random choice options
+
+1. title
+2. text
+3. choose from multiple
+4. multiple routes
+
+*/
+
+var editable = true;
+
+// Function to download data to a file
+function download(data, filename, type) {
+    var file = new Blob([data], {type: type});
+    if (window.navigator.msSaveOrOpenBlob) // IE10+
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else { // Others
+        var a = document.createElement("a"),
+                url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);  
+        }, 0); 
+    }
+}
+
+-->
